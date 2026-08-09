@@ -186,10 +186,12 @@ class AlerterState:
             config["clients_file"].unlink()
             for client in existing_clients:
                 if client in state["clients"]:
-                    state["clients"][client]["alert_time"] = existing_clients[client]["alert_time"]
-                    state["clients"][client]["notify_time"] = existing_clients[client][
-                        "notify_time"
-                    ]
+                    state["clients"][client]["alert_time"] = from_utc_timestamp(
+                        existing_clients[client]["alert_time"]
+                    )
+                    state["clients"][client]["notify_time"] = from_utc_timestamp(
+                        existing_clients[client]["notify_time"]
+                    )
 
         for client_id, client_state in state["clients"].items():
             client_state["silenced_until"] = AlerterState._load_silenced_until(client_id)
@@ -230,8 +232,8 @@ class AlerterState:
         # Locks are not json serializable.
         clients_without_locks = {
             client: {
-                "alert_time": state["clients"][client]["alert_time"],
-                "notify_time": state["clients"][client]["notify_time"],
+                "alert_time": to_utc_timestamp(state["clients"][client]["alert_time"]),
+                "notify_time": to_utc_timestamp(state["clients"][client]["notify_time"]),
             }
             for client in state["clients"]
         }
@@ -373,6 +375,20 @@ def now_datetime():
 def up_time():
     """Return number of seconds that the daemon has been running."""
     return time.monotonic() - state["start_time"]
+
+
+def to_utc_timestamp(monotonic_value: Optional[float]) -> Optional[float]:
+    """Convert an in-process monotonic reading to UTC timestamp."""
+    if monotonic_value is None:
+        return None
+    return (monotonic_value - state["start_time"]) + state["start_date"]
+
+
+def from_utc_timestamp(utc_timestamp: Optional[float]) -> Optional[float]:
+    """Convert a serialized UTC timestamp back to monotonic."""
+    if utc_timestamp is None:
+        return None
+    return (utc_timestamp - state["start_date"]) + state["start_time"]
 
 
 def split_destinations(destinations: List[str]) -> Dict[str, List[str]]:

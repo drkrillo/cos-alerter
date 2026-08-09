@@ -203,7 +203,7 @@ def test_is_down_from_graceful_shutdown(monotonic_mock, fake_fs):
     config.reload()
     fake_fs.create_file(config["clients_file"])
     with config["clients_file"].open("w") as f:
-        f.write('{"clientid1": {"alert_time": 500, "notify_time": null}}')
+        f.write('{"clientid1": {"alert_time": 1672531000, "notify_time": null}}')
     monotonic_mock.return_value = 1000
     print("Hello Test")
     AlerterState.initialize()
@@ -213,6 +213,23 @@ def test_is_down_from_graceful_shutdown(monotonic_mock, fake_fs):
         print(state.data)
         assert state.is_down() is False
         monotonic_mock.return_value = 2330
+        assert state.is_down() is True
+
+
+@freezegun.freeze_time("2023-01-01")
+@unittest.mock.patch("time.monotonic")
+def test_is_down_after_reboot(monotonic_mock, fake_fs):
+    config.reload()
+    fake_fs.create_file(config["clients_file"])
+    with config["clients_file"].open("w") as f:
+        # An alert was received ten minutes before this process started.
+        f.write('{"clientid1": {"alert_time": 1672530600, "notify_time": null}}')
+    monotonic_mock.return_value = 5
+    AlerterState.initialize()
+    state = AlerterState(clientid="clientid1")
+    with state:
+        assert state.is_down() is False
+        monotonic_mock.return_value = 400
         assert state.is_down() is True
 
 
