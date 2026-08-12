@@ -235,6 +235,23 @@ def test_is_down_after_reboot(monotonic_mock, fake_fs):
 
 @freezegun.freeze_time("2023-01-01")
 @unittest.mock.patch("time.monotonic")
+def test_is_down_with_future_alert_time(monotonic_mock, fake_fs):
+    config.reload()
+    fake_fs.create_file(config["clients_file"])
+    with config["clients_file"].open("w") as f:
+        # A raw monotonic reading, as older releases stored it.
+        f.write('{"clientid1": {"alert_time": 1672534800, "notify_time": null}}')
+    monotonic_mock.return_value = 5
+    AlerterState.initialize()
+    state = AlerterState(clientid="clientid1")
+    with state:
+        assert state.is_down() is False
+        monotonic_mock.return_value = 400
+        assert state.is_down() is True
+
+
+@freezegun.freeze_time("2023-01-01")
+@unittest.mock.patch("time.monotonic")
 def test_recently_notified(monotonic_mock, fake_fs):
     monotonic_mock.return_value = 1000
     AlerterState.initialize()

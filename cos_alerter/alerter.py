@@ -186,10 +186,10 @@ class AlerterState:
             config["clients_file"].unlink()
             for client in existing_clients:
                 if client in state["clients"]:
-                    state["clients"][client]["alert_time"] = from_utc_timestamp(
+                    state["clients"][client]["alert_time"] = _restore_time(
                         existing_clients[client]["alert_time"]
                     )
-                    state["clients"][client]["notify_time"] = from_utc_timestamp(
+                    state["clients"][client]["notify_time"] = _restore_time(
                         existing_clients[client]["notify_time"]
                     )
 
@@ -389,6 +389,17 @@ def from_utc_timestamp(utc_timestamp: Optional[float]) -> Optional[float]:
     if utc_timestamp is None:
         return None
     return (utc_timestamp - state["start_date"]) + state["start_time"]
+
+
+def _restore_time(utc_timestamp: Optional[float]) -> Optional[float]:
+    """Convert a time from the state file, resetting it if it lands in the future."""
+    monotonic_value = from_utc_timestamp(utc_timestamp)
+    if monotonic_value is None:
+        return None
+    # 0 rather than None, so is_down() counts from the start time.
+    if monotonic_value > state["start_time"]:
+        return 0
+    return monotonic_value
 
 
 def split_destinations(destinations: List[str]) -> Dict[str, List[str]]:
