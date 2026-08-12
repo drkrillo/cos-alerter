@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed hash comparison to prevent timing analysis based attacks
 - A note on secure deployments
 - Improved test coverage for `daemon.py` (`client_loop` when should_act is True and `main` with dashboard address)
+- Fixed alert times pointing to the future after a reboot
 
 ## CI - updates
 
