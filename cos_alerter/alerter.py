@@ -187,7 +187,7 @@ class AlerterState:
             for client in existing_clients:
                 if client in state["clients"]:
                     state["clients"][client]["alert_time"] = _restore_time(
-                        existing_clients[client]["alert_time"]
+                        existing_clients[client]["alert_time"], True
                     )
                     state["clients"][client]["notify_time"] = _restore_time(
                         existing_clients[client]["notify_time"]
@@ -391,14 +391,21 @@ def from_utc_timestamp(utc_timestamp: Optional[float]) -> Optional[float]:
     return (utc_timestamp - state["start_date"]) + state["start_time"]
 
 
-def _restore_time(utc_timestamp: Optional[float]) -> Optional[float]:
+def _restore_time(utc_timestamp: Optional[float], is_alert_time: bool = False) -> Optional[float]:
     """Convert a time from the state file, resetting it if it lands in the future."""
     monotonic_value = from_utc_timestamp(utc_timestamp)
     if monotonic_value is None:
         return None
-    # 0 rather than None, so is_down() counts from the start time.
+    # from_utc_timestamp(0) rather than None, so is_down() counts from the start time.
     if monotonic_value > state["start_time"]:
-        return 0
+        if is_alert_time:
+            logger.warning(
+                "Discarded a stored alert time that lands in the future (%s). "
+                "It was reset to the Unix epoch: the dashboard will report the last "
+                "heartbeat as decades ago until a new one arrives.",
+                utc_timestamp,
+            )
+        return from_utc_timestamp(0)
     return monotonic_value
 
 
